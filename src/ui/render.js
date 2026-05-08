@@ -11,22 +11,24 @@
  */
 
 import { showToast } from '../utils/dom.js';
+// Import character states functions (needed for local use + re-export)
+import { renderCharacterStates, renderReflectionProgressSection } from './character-states.js';
 import { renderPerfTab, updateBudgetIndicators } from './settings.js';
 import { refreshStats } from './status.js';
 
 // Re-export character states functions
-export {
-    renderCharacterStates,
-    renderReflectionProgressSection,
-} from './character-states.js';
+export { renderCharacterStates, renderReflectionProgressSection };
 
-// Re-export entity browser functions
-export {
+// Import entity browser functions (needed for local use + re-export)
+import {
     bindEntityBrowserEvents,
     initEntityEventBindings,
     renderEntityList,
     renderWorldTab,
 } from './entity-browser.js';
+
+// Re-export entity browser functions
+export { bindEntityBrowserEvents, initEntityEventBindings, renderEntityList, renderWorldTab };
 
 // Import memory browser functions (needed for backward compatibility aliases)
 import {
