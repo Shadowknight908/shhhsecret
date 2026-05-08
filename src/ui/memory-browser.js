@@ -76,7 +76,7 @@ async function deleteMemory(id) {
     const deleted = await deleteMemoryAction(id);
     if (deleted.success) {
         if (deleted.stChanges) {
-            const { applySyncChanges } = await import('../extraction/extract.js');
+            const { applySyncChanges } = await import('../extraction/backfill.js');
             await applySyncChanges(deleted.stChanges);
         }
         renderMemoryList();
@@ -121,7 +121,7 @@ async function saveEdit(id, btnElement) {
     const updated = await updateMemoryAction(id, { summary, importance, temporal_anchor, is_transient });
     if (updated.success) {
         if (updated.stChanges) {
-            const { applySyncChanges } = await import('../extraction/extract.js');
+            const { applySyncChanges } = await import('../extraction/backfill.js');
             await applySyncChanges(updated.stChanges);
         }
         const memory = getMemoryById(id);

@@ -42,7 +42,10 @@ export async function fetchGraphFromLLM(contextParams, events, abortSignal) {
         outputLanguage: contextParams.outputLanguage,
     });
 
-    const graphResponse = await callLLM(graphPrompt, LLM_CONFIGS.extraction_graph, { signal: abortSignal });
+    const graphResponse = await callLLM(graphPrompt, LLM_CONFIGS.extraction_graph, {
+        structured: true,
+        signal: abortSignal,
+    });
 
     const graphResult = parseGraphExtractionResponse(graphResponse);
 

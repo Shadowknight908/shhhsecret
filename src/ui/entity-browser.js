@@ -255,7 +255,7 @@ async function saveEntityEdit(key, btn) {
 
         // Sync ST Vector changes (re-sync on rename, delete old hashes)
         if (result.stChanges) {
-            const { applySyncChanges } = await import('../extraction/extract.js');
+            const { applySyncChanges } = await import('../extraction/backfill.js');
             await applySyncChanges(result.stChanges);
         }
 
@@ -302,7 +302,7 @@ async function deleteEntityAction(key) {
 
         // Clean up ST Vector if needed
         if (result.stChanges) {
-            const { applySyncChanges } = await import('../extraction/extract.js');
+            const { applySyncChanges } = await import('../extraction/backfill.js');
             await applySyncChanges(result.stChanges);
         }
 
@@ -460,7 +460,7 @@ async function confirmEntityMerge(sourceKey) {
 
         // Sync ST Vector changes (delete removed, re-sync surviving node)
         if (result.stChanges) {
-            const { applySyncChanges } = await import('../extraction/extract.js');
+            const { applySyncChanges } = await import('../extraction/backfill.js');
             await applySyncChanges(result.stChanges);
         }
 
