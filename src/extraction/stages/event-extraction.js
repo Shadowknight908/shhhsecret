@@ -94,7 +94,7 @@ export async function fetchEventsFromLLM(contextParams, existingMemories, abortS
         outputLanguage: contextParams.outputLanguage,
     });
 
-    const eventResponse = await callLLM(eventPrompt, LLM_CONFIGS.EXTRACTION, { signal: abortSignal });
+    const eventResponse = await callLLM(eventPrompt, LLM_CONFIGS.extraction_events, { signal: abortSignal });
 
     const { events: rawEvents } = parseEventExtractionResponse(eventResponse);
 
