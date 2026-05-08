@@ -284,7 +284,8 @@ export function renderCommunityAccordion(id, community) {
  * @returns {string} HTML string
  */
 export function renderEntityCard(entity, key) {
-    const typeLabel = entity.type.charAt(0) + entity.type.slice(1).toLowerCase();
+    const entityType = entity.type || 'unknown';
+    const typeLabel = entityType.charAt(0) + entityType.slice(1).toLowerCase();
     const aliasText = entity.aliases?.length > 0 ? entity.aliases.join(', ') : '';
     const pendingBadge = !hasEmbedding(entity)
         ? '<span class="openvault-pending-embed"><span class="icon">↻</span> pending</span>'
@@ -295,7 +296,7 @@ export function renderEntityCard(entity, key) {
       <div class="openvault-entity-header">
         <span class="openvault-entity-name">${escapeHtml(entity.name)}</span>
         <div class="openvault-entity-badges">
-          <span class="openvault-entity-type-badge ${entity.type.toLowerCase()}">
+          <span class="openvault-entity-type-badge ${entityType.toLowerCase()}">
             ${typeLabel}
           </span>
           ${pendingBadge}
