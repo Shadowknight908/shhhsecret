@@ -224,7 +224,7 @@ export async function onChatChanged() {
     if (!isExtensionEnabled()) return;
 
     const { clearEmbeddingCache } = await import('./embeddings.js');
-    const { cleanupCharacterStates } = await import('./extraction/stages/graph-update.js');
+    const { cleanupCharacterStates } = await import('./extraction/extract.js');
     const { clearRetrievalDebug } = await import('./retrieval/debug-cache.js');
     const { clearTokenCache } = await import('./utils/tokens.js');
 

@@ -265,10 +265,7 @@ export const IDFCacheSchema = z.object({
 // Context parameters for LLM extraction
 export const ExtractionContextParamsSchema = z.object({
     messagesText: z.string(),
-    names: z.object({
-        char: z.string(),
-        user: z.string(),
-    }),
+    names: z.array(z.string()),
     charDesc: z.string(),
     personaDesc: z.string(),
     preamble: z.string(),
