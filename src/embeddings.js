@@ -409,15 +409,23 @@ class OllamaStrategy extends EmbeddingStrategy {
 
         try {
             const cleanUrl = url.replace(/\/+$/, '');
-            const response = await getDeps().fetch(`${cleanUrl}/api/embeddings`, {
+            // Ollama 0.5.1+ uses /api/embed with input[] array; older versions used /api/embeddings with prompt string.
+            // Try new endpoint first; fall back to legacy on 404.
+            let response = await getDeps().fetch(`${cleanUrl}/api/embed`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    model: model,
-                    prompt: text.trim(),
-                }),
+                body: JSON.stringify({ model, input: [text.trim()] }),
                 signal,
             });
+
+            if (response.status === 404) {
+                response = await getDeps().fetch(`${cleanUrl}/api/embeddings`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model, prompt: text.trim() }),
+                    signal,
+                });
+            }
 
             if (!response.ok) {
                 logDebug(`Ollama embedding request failed: ${response.status} ${response.statusText}`);
@@ -425,7 +433,9 @@ class OllamaStrategy extends EmbeddingStrategy {
             }
 
             const data = await response.json();
-            return data.embedding ? new Float32Array(data.embedding) : null;
+            // /api/embed returns { embeddings: [[...]] }; /api/embeddings returns { embedding: [...] }
+            const vector = Array.isArray(data.embeddings) ? data.embeddings[0] : data.embedding;
+            return vector ? new Float32Array(vector) : null;
         } catch (error) {
             if (error.name === 'AbortError') throw error;
             logError('Ollama embedding failed', error, {

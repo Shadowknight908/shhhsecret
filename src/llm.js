@@ -161,7 +161,9 @@ export async function callLLM(messages, config, options = {}) {
         const context = deps.getContext();
         if (context.parseReasoningFromString) {
             const parsed = context.parseReasoningFromString(content);
-            return parsed ? parsed.content : content;
+            // Guard against empty parsed.content: if the reasoning template consumed the
+            // entire response (model wrapped JSON in thinking tags), fall back to original.
+            return parsed?.content ? parsed.content : content;
         }
 
         return content;
