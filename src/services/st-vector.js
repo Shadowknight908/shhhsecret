@@ -185,6 +185,18 @@ export function getSTVectorRequestBody(source) {
         case 'nanogpt':
             body.model = extSettings?.vectors?.nanogpt_model;
             break;
+        case 'siliconflow':
+            body.model = extSettings?.vectors?.siliconflow_model;
+            body.siliconflow_endpoint = extSettings?.vectors?.siliconflow_endpoint;
+            break;
+        case 'workers_ai':
+            body.model = extSettings?.vectors?.workers_ai_model;
+            body.workers_ai_account_id = extSettings?.vectors?.workers_ai_account_id;
+            break;
+        case 'koboldcpp':
+            body.apiUrl = getSourceApiUrl('koboldcpp');
+            body.model = extSettings?.vectors?.koboldcpp_model;
+            break;
         default:
             // No additional params needed
             break;
