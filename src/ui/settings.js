@@ -28,7 +28,7 @@ import { updateEventListeners } from '../events.js';
 import { executeEmergencyCut } from '../extraction/extract.js';
 import { formatForClipboard, getAll as getPerfData } from '../perf/store.js';
 import { getSettings, setSetting } from '../settings.js';
-import { logError, logInfo, logWarn } from '../utils/logging.js';
+import { clearLogBuffer, getLogBuffer, logError, logInfo, logWarn, subscribeToLogs } from '../utils/logging.js';
 import { exportToClipboard } from './export-debug.js';
 import { validateRPM } from './helpers.js';
 import { initBrowser, refreshAllUI, resetAndRender } from './render.js';
@@ -834,6 +834,46 @@ function bindUIElements() {
                 () => showToast('error', 'Failed to copy — try selecting manually')
             )
             .catch(() => {});
+    });
+
+    // Debug Log panel — populate on first bind, then stream new entries
+    const $logOutput = $('#openvault_log_output');
+    $logOutput.val(getLogBuffer().join('\n'));
+    if ($logOutput.val()) {
+        $logOutput.scrollTop($logOutput[0].scrollHeight);
+    }
+
+    subscribeToLogs((entry) => {
+        if (entry === null) {
+            // Clear signal
+            $('#openvault_log_output').val('');
+            return;
+        }
+        const el = document.getElementById('openvault_log_output');
+        if (!el) return;
+        const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+        el.value = el.value ? `${el.value}\n${entry}` : entry;
+        if (atBottom) el.scrollTop = el.scrollHeight;
+    });
+
+    $('#openvault_log_copy_btn').on('click', () => {
+        const text = $('#openvault_log_output').val();
+        if (!text) {
+            showToast('info', 'Log is empty');
+            return;
+        }
+        navigator.clipboard
+            .writeText(String(text))
+            .then(
+                () => showToast('success', 'Log copied to clipboard'),
+                () => showToast('error', 'Failed to copy — try selecting manually')
+            )
+            .catch(() => {});
+    });
+
+    $('#openvault_log_clear_btn').on('click', () => {
+        clearLogBuffer();
+        showToast('info', 'Log cleared');
     });
 
     // Injection settings bindings

@@ -720,6 +720,25 @@
                         </tbody>
                     </table>
                 </div>
+
+                <!-- Debug Log Viewer -->
+                <div class="openvault-card" style="margin-top: 12px;">
+                    <div class="openvault-card-header">
+                        <span class="openvault-card-title">
+                            <i class="fa-solid fa-terminal"></i> Debug Log
+                        </span>
+                        <div class="openvault-log-actions">
+                            <button id="openvault_log_copy_btn" class="menu_button openvault-log-btn" title="Copy all log entries">
+                                <i class="fa-solid fa-clipboard"></i> Copy
+                            </button>
+                            <button id="openvault_log_clear_btn" class="menu_button openvault-log-btn" title="Clear log">
+                                <i class="fa-solid fa-trash"></i> Clear
+                            </button>
+                        </div>
+                    </div>
+                    <small class="openvault-hint">Enable <strong>Debug Mode</strong> (Advanced tab) to capture detailed stage logs. INF/WRN/ERR always captured.</small>
+                    <textarea id="openvault_log_output" class="openvault-log-output" readonly placeholder="No log entries yet. Enable Debug Mode and trigger an action."></textarea>
+                </div>
             </div>
         </div>
     </div>
