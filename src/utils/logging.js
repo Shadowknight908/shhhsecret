@@ -1,6 +1,68 @@
 import { extensionName } from '../constants.js';
 import { getDeps } from '../deps.js';
 
+// ── In-page log buffer (for mobile-accessible log viewer) ────────────────────
+const LOG_BUFFER_MAX = 400;
+const _logBuffer = [];
+const _logSubscribers = new Set();
+
+function _ts() {
+    const d = new Date();
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}.${String(d.getMilliseconds()).padStart(3, '0')}`;
+}
+
+function _serialize(data) {
+    if (data === undefined) return '';
+    if (data instanceof Error) return ` — ${data.message}`;
+    try {
+        return ' ' + JSON.stringify(data);
+    } catch {
+        return ' ' + String(data);
+    }
+}
+
+function _push(level, msg, data) {
+    const entry = `[${_ts()}] ${level} ${msg}${_serialize(data)}`;
+    _logBuffer.push(entry);
+    if (_logBuffer.length > LOG_BUFFER_MAX) _logBuffer.shift();
+    for (const fn of _logSubscribers) {
+        try {
+            fn(entry);
+        } catch {
+            /* subscriber errors must not break logging */
+        }
+    }
+}
+
+/** Return a copy of the current log buffer. */
+export function getLogBuffer() {
+    return [..._logBuffer];
+}
+
+/** Clear the log buffer and notify subscribers. */
+export function clearLogBuffer() {
+    _logBuffer.length = 0;
+    for (const fn of _logSubscribers) {
+        try {
+            fn(null);
+        } catch {
+            /* ignore */
+        }
+    }
+}
+
+/**
+ * Subscribe to new log entries.
+ * @param {(entry: string | null) => void} fn - Called with new entry string, or null on clear.
+ * @returns {() => void} Unsubscribe function.
+ */
+export function subscribeToLogs(fn) {
+    _logSubscribers.add(fn);
+    return () => _logSubscribers.delete(fn);
+}
+
+// ── Loggers ──────────────────────────────────────────────────────────────────
+
 /**
  * Debug-only log. Hidden unless settings.debugMode is true.
  * @param {string} msg
@@ -9,6 +71,7 @@ import { getDeps } from '../deps.js';
 export function logDebug(msg, data) {
     const settings = getDeps().getExtensionSettings()[extensionName];
     if (!settings?.debugMode) return;
+    _push('DBG', msg, data);
     const c = getDeps().console;
     if (data !== undefined) {
         c.log(`[OpenVault] ${msg}`, data);
@@ -23,6 +86,7 @@ export function logDebug(msg, data) {
  * @param {unknown} [data]
  */
 export function logInfo(msg, data) {
+    _push('INF', msg, data);
     const c = getDeps().console;
     if (data !== undefined) {
         c.log(`[OpenVault] ${msg}`, data);
@@ -37,6 +101,7 @@ export function logInfo(msg, data) {
  * @param {unknown} [data]
  */
 export function logWarn(msg, data) {
+    _push('WRN', msg, data);
     const c = getDeps().console;
     if (data !== undefined) {
         c.warn(`[OpenVault] ${msg}`, data);
@@ -52,6 +117,7 @@ export function logWarn(msg, data) {
  * @param {Record<string, unknown>} [context] - Debugging state (counts, model names, truncated inputs)
  */
 export function logError(msg, error, context) {
+    _push('ERR', msg, error);
     const c = getDeps().console;
     c.error(`[OpenVault] ${msg}`);
     if (error) {

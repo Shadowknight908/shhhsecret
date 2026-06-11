@@ -1,3 +1,30 @@
+/* ─── Debug Log Panel ─── */
+.openvault-log-actions {
+    display: flex;
+    gap: 6px;
+}
+.openvault-log-btn {
+    padding: 4px 10px;
+    font-size: 0.8em;
+}
+.openvault-log-output {
+    width: 100%;
+    height: 240px;
+    margin-top: 8px;
+    font-family: monospace;
+    font-size: 0.78em;
+    line-height: 1.5;
+    resize: vertical;
+    background: rgba(0, 0, 0, 0.3);
+    color: var(--SmartThemeBodyColor, #ccc);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    padding: 6px 8px;
+    box-sizing: border-box;
+    white-space: pre;
+    overflow-wrap: normal;
+}
+
 /* ─── Perf Tab ─── */
 .openvault-perf-table {
     width: 100%;
