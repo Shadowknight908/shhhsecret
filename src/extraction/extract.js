@@ -1367,6 +1367,15 @@ export async function extractAllMessages(optionsOrCallback) {
                 return { messagesProcessed: 0, eventsCreated: 0 };
             }
 
+            // Configuration errors (no profile, etc.) will never succeed on retry — fail fast
+            if (error.nonRetryable) {
+                if (isEmergencyCut) throw error;
+                logDebug(`Backfill: non-retryable error, stopping immediately: ${error.message}`);
+                clearAllLocks();
+                onError?.(error);
+                return { messagesProcessed: 0, eventsCreated: 0 };
+            }
+
             retryCount++;
             const isTimeout = error.message.includes('timed out');
             const errorType = isTimeout ? 'timeout' : 'error';

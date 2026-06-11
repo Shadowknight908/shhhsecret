@@ -124,8 +124,11 @@ export async function callLLM(messages, config, options = {}) {
     }
 
     if (!profileId) {
-        throw new Error(
-            `No connection profile available for ${errorContext.toLowerCase()}. Please configure a profile in Connection Manager.`
+        throw Object.assign(
+            new Error(
+                `No connection profile available for ${errorContext.toLowerCase()}. Please configure a profile in Connection Manager.`
+            ),
+            { nonRetryable: true }
         );
     }
 
