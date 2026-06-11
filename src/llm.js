@@ -124,18 +124,13 @@ export async function callLLM(messages, config, options = {}) {
             const profile = profiles.find((p) => p.id === profileId);
             logDebug(`No ${profileSettingKey} set, using current profile: ${profile?.name || profileId}`);
         } else {
-            // Dump available keys to help diagnose wrong property name
-            logDebug(`CM settings keys: ${Object.keys(cm || {}).join(', ') || '(none — CM not found)'}`);
+            // Log both the keys and the raw selectedProfile value to diagnose the mismatch
+            logDebug(
+                `CM selectedProfile raw value: ${JSON.stringify(cm?.selectedProfile)} | keys: ${Object.keys(cm || {}).join(', ') || '(none)'}`
+            );
+            // Last resort: pass undefined to sendRequest — CM may fall back to the active ST connection
+            profileId = undefined;
         }
-    }
-
-    if (!profileId) {
-        throw Object.assign(
-            new Error(
-                `No connection profile available for ${errorContext.toLowerCase()}. Please configure a profile in Connection Manager.`
-            ),
-            { nonRetryable: true }
-        );
     }
 
     // --- Helper: execute a single LLM request against a given profile ---
@@ -182,10 +177,18 @@ export async function callLLM(messages, config, options = {}) {
 
     // --- Main request with backup failover ---
     try {
-        logDebug(`Using ConnectionManagerRequestService with profile: ${profileId}`);
+        logDebug(`Using ConnectionManagerRequestService with profile: ${profileId ?? '(none — trying default)'}`);
         return await executeRequest(profileId);
     } catch (mainError) {
         if (mainError.name === 'AbortError') throw mainError;
+
+        // Already marked nonRetryable (e.g. set above), or CM errors about missing profile — don't retry
+        if (
+            mainError.nonRetryable ||
+            /no.*(profile|connection)|profile.*(not found|invalid|missing)/i.test(mainError.message || '')
+        ) {
+            throw Object.assign(mainError, { nonRetryable: true });
+        }
 
         // Attempt backup profile if configured and different from main
         const backupProfileId = options.backupProfileId ?? settings.backupProfile;
