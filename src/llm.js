@@ -115,17 +115,26 @@ export async function callLLM(messages, config, options = {}) {
     let profileId = options.profileId ?? settings[profileSettingKey];
 
     if (!profileId) {
-        profileId = extension_settings?.connectionManager?.selectedProfile;
+        const cm = extension_settings?.connectionManager;
+        // Try known Connection Manager property names for the active profile
+        profileId =
+            cm?.selectedProfile ?? cm?.activeProfile ?? cm?.active_profile ?? cm?.selected_profile ?? cm?.current;
         if (profileId) {
-            const profiles = extension_settings?.connectionManager?.profiles || [];
+            const profiles = cm?.profiles || [];
             const profile = profiles.find((p) => p.id === profileId);
             logDebug(`No ${profileSettingKey} set, using current profile: ${profile?.name || profileId}`);
+        } else {
+            // Dump available keys to help diagnose wrong property name
+            logDebug(`CM settings keys: ${Object.keys(cm || {}).join(', ') || '(none — CM not found)'}`);
         }
     }
 
     if (!profileId) {
-        throw new Error(
-            `No connection profile available for ${errorContext.toLowerCase()}. Please configure a profile in Connection Manager.`
+        throw Object.assign(
+            new Error(
+                `No connection profile available for ${errorContext.toLowerCase()}. Please configure a profile in Connection Manager.`
+            ),
+            { nonRetryable: true }
         );
     }
 
