@@ -982,18 +982,33 @@ export async function extractMemories(messageIds = null, targetChatId = null, op
 
         // Stage 1: Event extraction (LLM call)
         const existingMemories = selectMemoriesForExtraction(data, settings);
+        logDebug(
+            `Stage 1: calling event extraction LLM (${messages.length} messages, ${existingMemories.length} context memories)...`
+        );
+        const t0Events = performance.now();
         const { events: rawEvents } = await fetchEventsFromLLM(contextParams, existingMemories, abortSignal);
+        logDebug(
+            `Stage 1: event LLM done in ${Math.round(performance.now() - t0Events)}ms, got ${rawEvents.length} raw events`
+        );
 
         // Stage 2: Graph extraction (LLM call)
         let graphResult = { entities: [], relationships: [] };
+        logDebug('Stage 2: waiting for inter-call rate limit delay...');
         await rpmDelay(settings, 'Inter-call rate limit');
         const formattedEvents = rawEvents.map((e, i) => `${i + 1}. [${e.importance}★] ${e.summary}`);
+        logDebug('Stage 2: calling graph extraction LLM...');
+        const t0Graph = performance.now();
         graphResult = await fetchGraphFromLLM(contextParams, formattedEvents, abortSignal);
+        logDebug(
+            `Stage 2: graph LLM done in ${Math.round(performance.now() - t0Graph)}ms, got ${graphResult.entities.length} entities, ${graphResult.relationships.length} relationships`
+        );
 
         // Stage 3: Enrich & dedup events
         const messageIdsArray = messages.map((m) => m.id);
         const messageFingerprintsArray = messages.map((m) => getFingerprint(m));
         logDebug(`LLM returned ${rawEvents.length} events from ${messages.length} messages`);
+        logDebug('Stage 3: starting embedding enrichment and dedup...');
+        const t0Enrich = performance.now();
         const { events } = await enrichAndDedupEvents(
             rawEvents,
             messageIdsArray,
@@ -1001,6 +1016,9 @@ export async function extractMemories(messageIds = null, targetChatId = null, op
             batchId,
             data.memories || [],
             settings
+        );
+        logDebug(
+            `Stage 3: enrichment done in ${Math.round(performance.now() - t0Enrich)}ms, ${events.length} events after dedup`
         );
 
         // Stamp embedding model ID on first successful embedding generation
@@ -1013,12 +1031,14 @@ export async function extractMemories(messageIds = null, targetChatId = null, op
         }
 
         // Stage 4: Graph updates
+        logDebug('Stage 4: processing graph updates...');
         const { graphSyncChanges } = await processGraphUpdates(
             data.graph,
             graphResult.entities,
             graphResult.relationships,
             settings
         );
+        logDebug('Stage 4: graph updates done');
         incrementGraphMessageCount(messages.length);
 
         // ===== PHASE 1 COMMIT: Events + Graph are done =====
@@ -1038,7 +1058,9 @@ export async function extractMemories(messageIds = null, targetChatId = null, op
         updateIDFCache(data, data.graph?.nodes);
 
         // Intermediate save — Phase 1 data is now persisted
+        logDebug('Phase 1 commit: saving to chat metadata...');
         const phase1Saved = await saveOpenVaultData(targetChatId);
+        logDebug(`Phase 1 commit: save ${phase1Saved ? 'succeeded' : 'failed (chat changed?)'}`);
         if (!phase1Saved && targetChatId) {
             throw new Error('Chat changed during extraction');
         }
@@ -1053,6 +1075,7 @@ export async function extractMemories(messageIds = null, targetChatId = null, op
             toSync: [...eventSyncChanges.toSync, ...graphSyncChanges.toSync],
             toDelete: [...graphSyncChanges.toDelete],
         });
+        logDebug('Phase 1 commit: ST Vector sync done');
 
         // ===== PHASE 2: Enrichment (non-critical) =====
         try {
@@ -1129,13 +1152,20 @@ export async function runPhase2Enrichment(data, settings, targetChatId, options 
 
     try {
         const characterNames = Object.keys(data.reflection_state || {});
+        logDebug(
+            `Phase 2: synthesizing reflections for ${characterNames.length} character(s): ${characterNames.join(', ') || '(none)'}`
+        );
         await synthesizeReflections(data, characterNames, settings, { abortSignal });
+        logDebug('Phase 2: reflections done');
 
         const context = getDeps().getContext();
+        logDebug('Phase 2: running community detection...');
         await synthesizeCommunities(data, settings, context.name2, context.name1);
+        logDebug('Phase 2: community detection done');
 
         // Update IDF cache before save — reflections may have been added
         updateIDFCache(data, data.graph?.nodes);
+        logDebug('Phase 2: saving...');
         await saveOpenVaultData(targetChatId);
         logInfo('runPhase2Enrichment: Complete');
     } catch (error) {
@@ -1222,6 +1252,10 @@ export async function extractAllMessages(optionsOrCallback) {
     if (!isEmergencyCut) {
         onStart?.(initialBatchCount);
     }
+
+    // Block background worker from starting during manual backfill
+    operationState.extractionInProgress = true;
+    logDebug('Backfill: set extractionInProgress=true, worker will yield if it tries to start');
 
     // Capture chat ID to detect if user switches during backfill
     const targetChatId = getCurrentChatId();
